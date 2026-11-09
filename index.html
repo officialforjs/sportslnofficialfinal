@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบทำเนียบนักกีฬาวอลเลย์บอล - โรงเรียนเลิงนกทา</title>
+    
+    <!-- Google Fonts: Prompt -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            800: '#0c4a6e',
+                            900: '#0a3852',
+                        }
+                    },
+                    boxShadow: {
+                        'glow': '0 0 25px -5px rgba(2, 132, 199, 0.3)',
+                        'gold-glow': '0 0 20px -3px rgba(234, 179, 8, 0.4)',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Custom Animations & Framing */
+        .glass-header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        
+        .player-card-frame {
+            position: relative;
+            background: linear-gradient(145deg, #ffffff, #f8fafc);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .player-card-frame::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 1rem;
+            padding: 2px;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.5), rgba(2, 132, 199, 0.1), rgba(255, 255, 255, 0.8));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        .player-card-frame.status-starter::before {
+            background: linear-gradient(135deg, rgba(234, 179, 8, 0.9), rgba(250, 204, 21, 0.4), rgba(217, 119, 6, 0.8));
+        }
+
+        .badge-starter {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.35);
+        }
+
+        .badge-substitute {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+        }
+
+        /* Pulse animation for live data badge */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 0.4; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .pulse-dot {
+            animation: pulse-ring 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="h-full font-sans text-slate-800 flex flex-col min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50">
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Header Navigation Bar -->
+    <header class="sticky top-0 z-40 glass-header border-b border-sky-100 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                
+                <!-- School Logo & Title -->
+                <div class="flex items-center gap-3 sm:gap-4">
+                    <div class="relative group">
+                        <div class="absolute -inset-1 bg-gradient-to-r from-sky-400 to-blue-600 rounded-full blur opacity-40 group-hover:opacity-75 transition duration-300"></div>
+                        <img 
+                            src="https://s.imgz.io/2026/11/08/1000254058fbc044ee9982126f.jpg" 
+                            alt="ตราโรงเรียนเลิงนกทา" 
+                            class="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-white shadow-md"
+                            onerror="this.src='https://placehold.co/100x100/0284c7/ffffff?text=LN';"
+                        >
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-base sm:text-xl font-bold text-slate-900 tracking-tight leading-snug">
+                                โรงเรียนเลิงนกทา <span class="text-brand-600 text-sm sm:text-base font-semibold">จังหวัดยโสธร</span>
+                            </h1>
+                        </div>
+                        <p class="text-xs sm:text-sm font-medium text-slate-500 flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5 text-brand-500" fill="currentColor" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/>
+                                <path d="M12 2a10 10 0 0 1 10 10M2 12a10 10 0 0 1 10-10"/>
+                            </svg>
+                            ระบบทำเนียบและแสดงตัวนักกีฬาวอลเลย์บอล
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Admin Action Button & Status -->
+                <div class="flex items-center gap-2">
+                    <div id="adminBadge" class="hidden items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-dot"></span>
+                        สถานะ: แอดมิน
+                    </div>
+
+                    <!-- ปุ่มสมัครเข้าร่วมแข่งขัน -->
+                    <a 
+                        href="https://sportsln.vercel.app/" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md active:scale-95"
+                        title="สมัครเข้าร่วมแข่งขัน (sportsln.vercel.app)"
+                    >
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                        </svg>
+                        <span>สมัครนักกีฬา</span>
+                    </a>
+
+                    <!-- ปุ่มแอดมินสำหรับเปิดลิงก์ภายนอก -->
+                    <a 
+                        href="https://addminsportslnofficial.vercel.app" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 bg-brand-600 hover:bg-brand-700 text-white shadow-sm active:scale-95"
+                        title="เปิดระบบแอดมิน (addminsportslnofficial.vercel.app)"
+                    >
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                        </svg>
+                        <span>ระบบแอดมิน</span>
+                    </a>
+
+                    <button 
+                        id="adminAuthBtn" 
+                        onclick="handleAdminAuthToggle()"
+                        class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-brand-300 shadow-sm active:scale-95"
+                    >
+                        <svg id="adminBtnIcon" class="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                        <span id="adminBtnText">เข้าสู่ระบบแอดมิน</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+        
+        <!-- Announcement Banner (ระบบประกาศสำคัญ) -->
+        <section id="announcementBanner" class="bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-sky-500/10 border border-amber-200/80 rounded-2xl p-4 sm:p-5 shadow-sm relative overflow-hidden backdrop-blur-sm">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0 shadow-md">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 013 10c0-1.62.969-3.013 2.37-3.645M18 10a8 8 0 01-8 8m0-16a8 8 0 018 8"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md">ประกาศสำคัญ</span>
+                            <span id="announcementDate" class="text-[11px] text-slate-400 font-medium"></span>
+                        </div>
+                        <h3 id="announcementTitle" class="text-sm sm:text-base font-bold text-slate-900 mt-0.5">ยินดีต้อนรับสู่ระบบทำเนียบนนักกีฬา</h3>
+                        <p id="announcementText" class="text-xs sm:text-sm text-slate-600 mt-1 whitespace-pre-line">ยังไม่มีประกาศใหม่ในขณะนี้</p>
+                    </div>
+                </div>
+                <button id="editAnnouncementBtn" onclick="openAnnouncementModal()" class="hidden flex-shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-xs transition-all active:scale-95">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                    <span>แก้ไขประกาศ</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Category Selection Header & Quick Filter Banner -->
+        <section class="bg-gradient-to-r from-brand-600 via-brand-700 to-blue-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+            <!-- Decorative SVG Circles -->
+            <div class="absolute -right-10 -bottom-10 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
+            <div class="absolute right-40 -top-10 w-32 h-32 rounded-full bg-sky-400/20 blur-xl pointer-events-none"></div>
+
+            <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-sky-100 text-xs font-medium mb-3">
+                        <svg class="w-3.5 h-3.5 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                        </svg>
+                        ทำเนียบนายทะเบียนนักกีฬา
+                    </span>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                        รายชื่อนักกีฬาวอลเลย์บอลตัวจริง & ตัวสำรอง
+                    </h2>
+                    <p class="text-sky-100 text-xs sm:text-sm mt-1 max-w-xl">
+                        เลือกประเภทการแข่งขันเพื่อเข้าชมรายชื่อ รายละเอียดข้อมูล ชั้นเรียน และหมายเลขเสื้อของนักกีฬา
+                    </p>
+                </div>
+
+                <!-- Statistics Pills -->
+                <div class="flex items-center gap-3 bg-white/10 backdrop-blur-md p-3 rounded-xl border border-white/15">
+                    <div class="text-center px-3 border-r border-white/20">
+                        <div class="text-xs text-sky-200">ทั้งหมด</div>
+                        <div id="statTotal" class="text-xl sm:text-2xl font-bold">0</div>
+                    </div>
+                    <div class="text-center px-3 border-r border-white/20">
+                        <div class="text-xs text-amber-300 font-medium">ตัวจริง</div>
+                        <div id="statStarters" class="text-xl sm:text-2xl font-bold text-amber-300">0</div>
+                    </div>
+                    <div class="text-center px-3">
+                        <div class="text-xs text-sky-300 font-medium">ตัวสำรอง</div>
+                        <div id="statSubs" class="text-xl sm:text-2xl font-bold text-sky-200">0</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Category Buttons Grid (4 Main Categories + All) -->
+        <section class="space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
+                    </svg>
+                    หมวดหมู่ประเภทกีฬา
+                </h3>
+            </div>
+
+            <!-- 4 Main Category Buttons -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                
+                <!-- Category 1: ชายตอนต้น -->
+                <button 
+                    onclick="selectCategory('ประเภทกีฬาวอลเลย์บอลชายตอนต้น')"
+                    id="catBtn-1"
+                    class="cat-btn text-left p-4 rounded-xl border transition-all duration-200 flex items-center justify-between group bg-white border-slate-200 hover:border-brand-400 hover:shadow-md"
+                >
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-blue-50 text-brand-600 flex items-center justify-center group-hover:bg-brand-600 group-hover:text-white transition-colors">
+                            <!-- Official Male Junior Icon (Mars Symbol + Volleyball Detail) -->
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <circle cx="9.5" cy="14.5" r="4.5" stroke-width="2"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 11.5l6-6M15 5.5h4v4"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 14.5a2.5 2.5 0 0 1 5 0"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-500">มัธยมศึกษาตอนต้น</div>
+                            <div class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                                <span>ชายตอนต้น</span>
+                                <span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">
+                                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <circle cx="9.5" cy="14.5" r="4.5" stroke-width="2"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 11.5l6-6M15 5.5h4v4"/>
+                                    </svg>
+                                    ชาย
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="category-badge text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">0</span>
+                </button>
+
+                <!-- Category 2: ชายตอนปลาย -->
+                <button 
+                    onclick="selectCategory('ประเภทกีฬาวอลเลย์บอลชายตอนปลาย')"
+                    id="catBtn-2"
+                    class="cat-btn text-left p-4 rounded-xl border transition-all duration-200 flex items-center justify-between group bg-white border-slate-200 hover:border-brand-400 hover:shadow-md"
+                >
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-blue-50 text-brand-600 flex items-center justify-center group-hover:bg-brand-600 group-hover:text-white transition-colors">
+                            <!-- Official Male Senior Icon (Mars Symbol + Senior Star Badge) -->
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <circle cx="9.5" cy="14.5" r="4.5" stroke-width="2"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 11.5l6-6M15 5.5h4v4"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.5 12.5l.6 1.3 1.4.2-1 1 .2 1.4-1.2-.7-1.2.7.2-1.4-1-1 1.4-.2z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-500">มัธยมศึกษาตอนปลาย</div>
+                            <div class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                                <span>ชายตอนปลาย</span>
+                                <span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">
+                                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <circle cx="9.5" cy="14.5" r="4.5" stroke-width="2"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 11.5l6-6M15 5.5h4v4"/>
+                                    </svg>
+                                    ชาย
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="category-badge text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">0</span>
+                </button>
+
+                <!-- Category 3: หญิงตอนต้น -->
+                <button 
+                    onclick="selectCategory('ประเภทกีฬาวอลเลย์บอลหญิงตอนต้น')"
+                    id="catBtn-3"
+                    class="cat-btn text-left p-4 rounded-xl border transition-all duration-200 flex items-center justify-between group bg-white border-slate-200 hover:border-brand-400 hover:shadow-md"
+                >
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center group-hover:bg-pink-600 group-hover:text-white transition-colors">
+                            <!-- Official Female Junior Icon (Venus Symbol + Volleyball Detail) -->
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <circle cx="12" cy="9.5" r="4.5" stroke-width="2"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14v6m-3-3h6"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.5 9.5a2.5 2.5 0 0 1 5 0"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-500">มัธยมศึกษาตอนต้น</div>
+                            <div class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                                <span>หญิงตอนต้น</span>
+                                <span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-pink-100 text-pink-700 font-bold">
+                                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="9.5" r="4.5" stroke-width="2"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14v6m-3-3h6"/>
+                                    </svg>
+                                    หญิง
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="category-badge text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">0</span>
+                </button>
+
+                <!-- Category 4: หญิงตอนปลาย -->
+                <button 
+                    onclick="selectCategory('ประเภทกีฬาวอลเลย์บอลหญิงตอนปลาย')"
+                    id="catBtn-4"
+                    class="cat-btn text-left p-4 rounded-xl border transition-all duration-200 flex items-center justify-between group bg-white border-slate-200 hover:border-brand-400 hover:shadow-md"
+                >
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center group-hover:bg-pink-600 group-hover:text-white transition-colors">
+                            <!-- Official Female Senior Icon (Venus Symbol + Senior Star Badge) -->
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <circle cx="12" cy="9.5" r="4.5" stroke-width="2"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14v6m-3-3h6"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 7.5l.6 1.3 1.4.2-1 1 .2 1.4-1.2-.7-1.2.7.2-1.4-1-1 1.4-.2z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-500">มัธยมศึกษาตอนปลาย</div>
+                            <div class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                                <span>หญิงตอนปลาย</span>
+                                <span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-pink-100 text-pink-700 font-bold">
+                                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="9.5" r="4.5" stroke-width="2"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14v6m-3-3h6"/>
+                                    </svg>
+                                    หญิง
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="category-badge text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">0</span>
+                </button>
+
+            </div>
+        </section>
+
+        <!-- Secondary Filters & Search Bar -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            
+            <!-- Category Reset & Status Sub-filters -->
+            <div class="flex flex-wrap items-center gap-2">
+                <button 
+                    onclick="selectCategory('ALL')"
+                    id="catBtn-all"
+                    class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-brand-600 text-white shadow-sm"
+                >
+                    แสดงทุกหมวดหมู่
+                </button>
+
+                <div class="h-4 w-px bg-slate-200 hidden sm:block"></div>
+
+                <!-- Sub-filters: ตัวจริง / ตัวสำรอง -->
+                <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs">
+                    <button 
+                        onclick="setStatusFilter('ALL')" 
+                        id="statusFilter-ALL"
+                        class="px-3 py-1 rounded-md font-medium transition-colors bg-white text-slate-800 shadow-xs"
+                    >
+                        ทั้งหมด
+                    </button>
+                    <button 
+                        onclick="setStatusFilter('ตัวจริง')" 
+                        id="statusFilter-ตัวจริง"
+                        class="px-3 py-1 rounded-md font-medium text-slate-600 hover:text-slate-900 transition-colors inline-flex items-center gap-1.5"
+                    >
+                        <svg class="w-3.5 h-3.5 text-amber-500 fill-amber-400" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                        </svg>
+                        <span>ตัวจริง</span>
+                    </button>
+                    <button 
+                        onclick="setStatusFilter('ตัวสำรอง')" 
+                        id="statusFilter-ตัวสำรอง"
+                        class="px-3 py-1 rounded-md font-medium text-slate-600 hover:text-slate-900 transition-colors inline-flex items-center gap-1.5"
+                    >
+                        <svg class="w-3.5 h-3.5 text-sky-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                        </svg>
+                        <span>ตัวสำรอง</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search Input & Add Button -->
+            <div class="flex items-center gap-2">
+                <div class="relative flex-grow sm:w-64">
+                    <input 
+                        type="text" 
+                        id="searchInput"
+                        oninput="handleSearch()"
+                        placeholder="ค้นหาชื่อ หรือ หมายเลขเสื้อ..." 
+                        class="w-full pl-9 pr-4 py-2 text-xs sm:text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-slate-50 focus:bg-white transition-all"
+                    >
+                    <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+
+                <!-- Admin Add Player Trigger (Visible only for Admin) -->
+                <button 
+                    id="addPlayerBtn"
+                    onclick="openPlayerModal()"
+                    class="hidden items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold transition-all shadow-md active:scale-95 whitespace-nowrap"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    เพิ่มนักกีฬา
+                </button>
+            </div>
+        </div>
+
+        <!-- Current Filter Summary Tag -->
+        <div class="flex items-center justify-between text-xs text-slate-500 px-1">
+            <div class="flex items-center gap-1.5">
+                <span>กำลังแสดงผล:</span>
+                <span id="activeFilterText" class="font-bold text-brand-700 bg-sky-100 px-2.5 py-0.5 rounded-md">ทุกประเภทกีฬา (ทั้งหมด)</span>
+            </div>
+            <div id="resultCountText" class="font-medium">พบ 0 รายการ</div>
+        </div>
+
+        <!-- Player Cards Roster Grid -->
+        <section id="playerGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Dynamic Content or Empty State inserted via JavaScript -->
+        </section>
+
+        <!-- Empty State Container -->
+        <div id="emptyState" class="hidden flex-col items-center justify-center py-16 px-4 bg-white/70 rounded-2xl border border-dashed border-sky-200 text-center">
+            <div class="w-20 h-20 bg-sky-100 text-brand-600 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+            </div>
+            <h3 class="text-xl font-bold text-slate-800 mb-1">รอแอดมินเพิ่มข้อมูล</h3>
+            <p class="text-sm text-slate-500 max-w-sm mb-6">
+                ยังไม่มีข้อมูลรายชื่อนักกีฬาสำหรับรายการนี้ กรุณารอเจ้าหน้าที่ควบคุมทีมอัปเดตข้อมูล
+            </p>
+            <button 
+                id="emptyStateAddBtn"
+                onclick="openPlayerModal()"
+                class="hidden items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition-all shadow-md"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                เพิ่มข้อมูลนักกีฬาคนแรก
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-auto border-t border-slate-200 bg-white/80 backdrop-blur-md py-6 px-4">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+            <div class="flex items-center gap-3">
+                <img 
+                    src="https://s.imgz.io/2026/11/08/1000254058fbc044ee9982126f.jpg" 
+                    alt="Logo" 
+                    class="w-8 h-8 rounded-full border border-slate-200 object-cover"
+                    onerror="this.src='https://placehold.co/100x100/0284c7/ffffff?text=LN';"
+                >
+                <div>
+                    <div class="text-xs font-bold text-slate-800">โรงเรียนเลิงนกทา จังหวัดยโสธร</div>
+                    <div class="text-[11px] text-slate-500">การแข่งขันวอลเลย์บอลประจำปีการศึกษา</div>
+                </div>
+            </div>
+
+            <!-- Mandatory exact credit text -->
+            <div class="text-xs sm:text-sm font-medium text-slate-600 bg-sky-50/80 px-4 py-2 rounded-xl border border-sky-100">
+                เครดิตผู้จัดทำ: <span class="font-bold text-brand-700">คณะผู้ควบคุมนักกีฬาวอลเลย์บอล โรงเรียนเลิงนกทา จังหวัดยโสธร (นางสาวปวัตน์ นะดาบุตร คนที่สวยที่สุด)</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Floating Chat Trigger Button & Drawer -->
+    <button 
+        onclick="toggleChatDrawer()" 
+        class="fixed bottom-5 right-5 z-40 flex items-center gap-2.5 px-4 py-3 rounded-full bg-brand-600 hover:bg-brand-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 active:scale-95 group"
+        title="เปิดช่องทางพูดคุย/สอบถาม"
+    >
+        <div class="relative">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+            </svg>
+            <span id="unreadChatBadge" class="hidden absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full border-2 border-brand-600"></span>
+        </div>
+        <span class="text-xs sm:text-sm font-bold tracking-wide">กระดานพูดคุย</span>
+    </button>
+
+    <!-- Live Chat Drawer Window -->
+    <div id="chatDrawer" class="fixed bottom-20 right-5 z-40 hidden w-[calc(100vw-2.5rem)] sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex-col h-[520px] max-h-[75vh] transition-all duration-300">
+        <!-- Chat Header -->
+        <div class="bg-gradient-to-r from-brand-600 to-blue-800 p-3.5 text-white flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h4 class="text-xs sm:text-sm font-bold leading-tight">กระดานพูดคุย & สอบถาม</h4>
+                    <p class="text-[10px] text-sky-200 flex items-center gap-1 mt-0.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+                        เชื่อมต่อ Realtime
+                    </p>
+                </div>
+            </div>
+            <button onclick="toggleChatDrawer()" class="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Chat Messages Container -->
+        <div id="chatMessages" class="flex-grow p-3.5 overflow-y-auto space-y-3 bg-slate-50/70 text-xs">
+            <!-- Messages rendered via JS -->
+        </div>
+
+        <!-- Admin Reply Preview Banner -->
+        <div id="replyPreviewBanner" class="hidden px-3 py-1.5 bg-brand-50 border-t border-brand-100 flex items-center justify-between text-[11px]">
+            <div class="flex items-center gap-1.5 truncate">
+                <span class="font-bold text-brand-700">ตอบกลับ:</span>
+                <span id="replyTargetText" class="text-slate-600 truncate"></span>
+            </div>
+            <button onclick="cancelChatReply()" class="text-slate-400 hover:text-slate-600">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Chat Input Form -->
+        <form onsubmit="sendChatMessage(event)" class="p-3 bg-white border-t border-slate-200 space-y-2">
+            <div class="flex gap-2">
+                <input 
+                    type="text" 
+                    id="chatSenderName" 
+                    placeholder="ชื่อของคุณ..." 
+                    required 
+                    class="w-1/3 px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-slate-50"
+                >
+                <input 
+                    type="text" 
+                    id="chatMessageInput" 
+                    placeholder="พิมพ์ข้อความ..." 
+                    required 
+                    class="w-2/3 px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-slate-50"
+                >
+            </div>
+            <button type="submit" class="w-full py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                </svg>
+                <span>ส่งข้อความ</span>
+            </button>
+        </form>
+    </div>
+
+    <!-- ================= MODALS & DIALOGS ================= -->
+
+    <!-- Edit Announcement Modal -->
+    <div id="announcementModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+            <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 013 10c0-1.62.969-3.013 2.37-3.645M18 10a8 8 0 01-8 8m0-16a8 8 0 018 8"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-900">แก้ไขประกาศสำคัญ</h3>
+                </div>
+                <button onclick="closeModal('announcementModal')" class="text-slate-400 hover:text-slate-600 p-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <form onsubmit="saveAnnouncement(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">หัวข้อประกาศ *</label>
+                    <input 
+                        type="text" 
+                        id="announcementTitleInput" 
+                        required 
+                        placeholder="เช่น กำหนดการซ้อมรอบรองชนะเลิศ" 
+                        class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500"
+                    >
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">รายละเอียด *</label>
+                    <textarea 
+                        id="announcementTextInput" 
+                        rows="4" 
+                        required 
+                        placeholder="กรอกรายละเอียดข้อความประกาศ..." 
+                        class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500"
+                    ></textarea>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeModal('announcementModal')" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" class="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-md">
+                        บันทึกประกาศ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div id="loginModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 transform transition-all">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">เข้าสู่ระบบแอดมิน</h3>
+                        <p class="text-xs text-slate-500">สำหรับผู้จัดการทีมและคณะผู้ควบคุม</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('loginModal')" class="text-slate-400 hover:text-slate-600 p-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <form onsubmit="handleAdminLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อผู้ใช้ (Username)</label>
+                    <input 
+                        type="text" 
+                        id="loginUser" 
+                        required 
+                        placeholder="กรอกชื่อผู้ใช้..." 
+                        class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    >
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสผ่าน (Password)</label>
+                    <input 
+                        type="password" 
+                        id="loginPass" 
+                        required 
+                        placeholder="กรอกรหัสผ่าน..." 
+                        class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    >
+                </div>
+                <div class="pt-2 flex gap-3">
+                    <button 
+                        type="button" 
+                        onclick="closeModal('loginModal')" 
+                        class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                    >
+                        ยกเลิก
+                    </button>
+                    <button 
+                        type="submit" 
+                        class="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold shadow-md"
+                    >
+                        เข้าสู่ระบบ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Player Form Modal (Add & Edit) -->
+    <div id="playerModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 my-8">
+            <div class="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
+                <div>
+                    <h3 id="modalTitle" class="text-lg font-bold text-slate-900">เพิ่มข้อมูลนักกีฬา</h3>
+                    <p class="text-xs text-slate-500">กรอกข้อมูลนักกีฬาวอลเลย์บอลให้ถูกต้องครบถ้วน</p>
+                </div>
+                <button onclick="closeModal('playerModal')" class="text-slate-400 hover:text-slate-600 p-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="playerForm" onsubmit="savePlayer(event)" class="space-y-4">
+                <input type="hidden" id="playerId">
+
+                <!-- Full Name -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อ - นามสกุล *</label>
+                    <input 
+                        type="text" 
+                        id="playerFullName" 
+                        required 
+                        placeholder="เช่น ด.ช. สมชาย สายตบ" 
+                        class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500"
+                    >
+                </div>
+
+                <!-- Jersey Number & Grade Class -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">หมายเลขเสื้อ *</label>
+                        <input 
+                            type="number" 
+                            id="playerNumber" 
+                            required 
+                            min="1" 
+                            max="99" 
+                            placeholder="เช่น 7" 
+                            class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">ชั้นเรียน (ชั้น) *</label>
+                        <input 
+                            type="text" 
+                            id="playerGrade" 
+                            required 
+                            placeholder="เช่น ม.3/2 หรือ ม.5/1" 
+                            class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500"
+                        >
+                    </div>
+                </div>
+
+                <!-- Category -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">ประเภทกีฬา *</label>
+                    <select id="playerCategory" required class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500">
+                        <option value="ประเภทกีฬาวอลเลย์บอลชายตอนต้น">ประเภทกีฬาวอลเลย์บอลชายตอนต้น</option>
+                        <option value="ประเภทกีฬาวอลเลย์บอลชายตอนปลาย">ประเภทกีฬาวอลเลย์บอลชายตอนปลาย</option>
+                        <option value="ประเภทกีฬาวอลเลย์บอลหญิงตอนต้น">ประเภทกีฬาวอลเลย์บอลหญิงตอนต้น</option>
+                        <option value="ประเภทกีฬาวอลเลย์บอลหญิงตอนปลาย">ประเภทกีฬาวอลเลย์บอลหญิงตอนปลาย</option>
+                    </select>
+                </div>
+
+                <!-- Status (Starter / Sub) -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">สถานะผู้เล่น *</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50">
+                            <input type="radio" name="playerStatus" value="ตัวจริง" checked class="text-brand-600 focus:ring-brand-500">
+                            <svg class="w-4 h-4 text-amber-500 fill-amber-400" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                            </svg>
+                            <span class="text-xs font-bold text-amber-700">ตัวจริง</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50">
+                            <input type="radio" name="playerStatus" value="ตัวสำรอง" class="text-brand-600 focus:ring-brand-500">
+                            <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                            </svg>
+                            <span class="text-xs font-bold text-sky-700">ตัวสำรอง</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Image Selection Options (File Upload & URL) -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">รูปภาพนักกีฬา</label>
+                    
+                    <!-- Choice 1: Select File from Device / Take Photo -->
+                    <div class="mb-2">
+                        <label for="playerFileInput" class="flex items-center justify-center gap-2 w-full p-3 border-2 border-dashed border-sky-300 rounded-xl bg-sky-50/70 hover:bg-sky-100/70 text-brand-700 text-xs font-bold cursor-pointer transition-colors shadow-xs">
+                            <svg class="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span>คลิกเพื่อเลือกไฟล์ภาพจากเครื่อง / ถ่ายภาพ</span>
+                        </label>
+                        <input 
+                            type="file" 
+                            id="playerFileInput" 
+                            accept="image/*" 
+                            class="hidden" 
+                            onchange="handleFileSelect(event)"
+                        >
+                    </div>
+
+                    <!-- Divider -->
+                    <div class="relative flex py-1 items-center">
+                        <div class="flex-grow border-t border-slate-200"></div>
+                        <span class="flex-shrink mx-2 text-[10px] text-slate-400 font-medium">หรือระบุลิงก์รูปภาพ (URL)</span>
+                        <div class="flex-grow border-t border-slate-200"></div>
+                    </div>
+
+                    <!-- Choice 2: Image URL -->
+                    <input 
+                        type="text" 
+                        id="playerImage" 
+                        placeholder="https://example.com/photo.jpg" 
+                        class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500"
+                        oninput="updateImagePreview(this.value)"
+                    >
+                    <p class="text-[11px] text-slate-400 mt-1">สามารถเลือกไฟล์จากมือถือ/คอมพิวเตอร์ หรือระบุ URL รูปภาพได้ตามต้องการ</p>
+                </div>
+
+                <!-- Live Photo Preview -->
+                <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <img id="modalImgPreview" src="https://placehold.co/150x150/0284c7/ffffff?text=Player" class="w-12 h-12 rounded-lg object-cover border border-slate-200">
+                    <div class="text-xs text-slate-600">
+                        <span class="font-semibold block">ตัวอย่างรูปภาพ</span>
+                        <span id="imgPreviewStatus" class="text-slate-400">ภาพจำลองแสดงบนการ์ดนักกีฬา</span>
+                    </div>
+                </div>
+
+                <div class="pt-3 flex gap-3">
+                    <button 
+                        type="button" 
+                        onclick="closeModal('playerModal')" 
+                        class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                    >
+                        ยกเลิก
+                    </button>
+                    <button 
+                        type="submit" 
+                        class="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold shadow-md"
+                    >
+                        บันทึกข้อมูล
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Custom Delete Confirm Modal -->
+    <div id="deleteModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl border border-slate-100">
+            <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+            </div>
+            <h3 class="text-base font-bold text-slate-900 mb-1">ยืนยันการลบข้อมูล</h3>
+            <p class="text-xs text-slate-500 mb-6">คุณต้องการลบรายชื่อนักกีฬานี้ออกจากระบบใช่หรือไม่? Action นี้ไม่สามารถย้อนกลับได้</p>
+            <div class="flex gap-2">
+                <button 
+                    onclick="closeModal('deleteModal')" 
+                    class="flex-1 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                    ยกเลิก
+                </button>
+                <button 
+                    id="confirmDeleteBtn"
+                    class="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-md"
+                >
+                    ลบข้อมูล
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= FIREBASE SDK & APPLICATION LOGIC ================= -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getDatabase, ref, onValue, set, push, remove, update } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBFwh6AVoJOt9oOsAHGMJuoB9lLktnWyWU",
+            authDomain: "sports-ln.firebaseapp.com",
+            databaseURL: "https://sports-ln-default-rtdb.firebaseio.com",
+            projectId: "sports-ln",
+            storageBucket: "sports-ln.firebasestorage.app",
+            messagingSenderId: "762594482732",
+            appId: "1:762594482732:web:4ccb49b9fdbe7fc0f38f89",
+            measurementId: "G-GMXJ8WHHMS"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const playersRef = ref(db, 'volleyball_players');
+        const announcementRef = ref(db, 'volleyball_announcement');
+        const chatRef = ref(db, 'volleyball_chat');
+
+        // Application State
+        let allPlayers = {};
+        let currentAnnouncement = null;
+        let allChatMessages = {};
+        let activeReplyTo = null; // { id, name, text }
+        let currentCategory = 'ALL';
+        let currentStatusFilter = 'ALL';
+        let searchQuery = '';
+        let isAdminLoggedIn = false;
+        let deleteTargetId = null;
+
+        // Initialize Realtime Listeners
+        onValue(playersRef, (snapshot) => {
+            const data = snapshot.val();
+            allPlayers = data || {};
+            renderApp();
+        }, (error) => {
+            console.error("Firebase Database Error:", error);
+            showToast("ไม่สามารถเชื่อมต่อฐานข้อมูลนักกีฬาได้", "error");
+            renderApp();
+        });
+
+        // Realtime Listener for Announcement
+        onValue(announcementRef, (snapshot) => {
+            currentAnnouncement = snapshot.val();
+            renderAnnouncement();
+        });
+
+        // Realtime Listener for Chat Messages
+        onValue(chatRef, (snapshot) => {
+            allChatMessages = snapshot.val() || {};
+            renderChatMessages();
+        });
+
+        // Make functions globally available for inline handlers
+        window.selectCategory = (category) => {
+            currentCategory = category;
+            updateCategoryUI();
+            renderApp();
+        };
+
+        // Toggle Live Chat Drawer
+        window.toggleChatDrawer = () => {
+            const drawer = document.getElementById('chatDrawer');
+            if (drawer) {
+                drawer.classList.toggle('hidden');
+                drawer.classList.toggle('flex');
+                if (!drawer.classList.contains('hidden')) {
+                    scrollChatToBottom();
+                }
+            }
+        };
+
+        // Announcement Modal Controls
+        window.openAnnouncementModal = () => {
+            if (!isAdminLoggedIn) return;
+            document.getElementById('announcementTitleInput').value = currentAnnouncement?.title || '';
+            document.getElementById('announcementTextInput').value = currentAnnouncement?.text || '';
+            openModal('announcementModal');
+        };
+
+        window.saveAnnouncement = (e) => {
+            e.preventDefault();
+            if (!isAdminLoggedIn) return;
+            const title = document.getElementById('announcementTitleInput').value.trim();
+            const text = document.getElementById('announcementTextInput').value.trim();
+            
+            const annData = {
+                title: title,
+                text: text,
+                updatedAt: Date.now()
+            };
+
+            set(announcementRef, annData)
+                .then(() => {
+                    showToast("อัปเดตประกาศสำคัญเรียบร้อยแล้ว", "success");
+                    closeModal('announcementModal');
+                })
+                .catch((err) => {
+                    console.error(err);
+                    showToast("ไม่สามารถบันทึกประกาศได้", "error");
+                });
+        };
+
+        function renderAnnouncement() {
+            const titleEl = document.getElementById('announcementTitle');
+            const textEl = document.getElementById('announcementText');
+            const dateEl = document.getElementById('announcementDate');
+
+            if (currentAnnouncement && currentAnnouncement.title) {
+                titleEl.textContent = currentAnnouncement.title;
+                textEl.textContent = currentAnnouncement.text;
+                if (currentAnnouncement.updatedAt) {
+                    const date = new Date(currentAnnouncement.updatedAt);
+                    dateEl.textContent = `• ${date.toLocaleDateString('th-TH')} ${date.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})} น.`;
+                } else {
+                    dateEl.textContent = '';
+                }
+            } else {
+                titleEl.textContent = "ยินดีต้อนรับสู่ระบบทำเนียบนนักกีฬา";
+                textEl.textContent = "ยังไม่มีประกาศใหม่ในขณะนี้";
+                dateEl.textContent = '';
+            }
+        }
+
+        // Chat Logic
+        window.setChatReply = (id, name, text) => {
+            activeReplyTo = { id, name, text };
+            const banner = document.getElementById('replyPreviewBanner');
+            const targetText = document.getElementById('replyTargetText');
+            if (banner && targetText) {
+                targetText.textContent = `${name}: ${text}`;
+                banner.classList.remove('hidden');
+            }
+            document.getElementById('chatMessageInput').focus();
+        };
+
+        window.cancelChatReply = () => {
+            activeReplyTo = null;
+            const banner = document.getElementById('replyPreviewBanner');
+            if (banner) banner.classList.add('hidden');
+        };
+
+        window.sendChatMessage = (e) => {
+            e.preventDefault();
+            const senderNameInput = document.getElementById('chatSenderName');
+            const messageInput = document.getElementById('chatMessageInput');
+            
+            const senderName = senderNameInput.value.trim();
+            const message = messageInput.value.trim();
+
+            if (!senderName || !message) return;
+
+            const newMsgRef = push(chatRef);
+            const msgData = {
+                sender: senderName,
+                text: message,
+                isAdmin: isAdminLoggedIn,
+                replyTo: activeReplyTo ? activeReplyTo : null,
+                timestamp: Date.now()
+            };
+
+            set(newMsgRef, msgData)
+                .then(() => {
+                    messageInput.value = '';
+                    cancelChatReply();
+                    scrollChatToBottom();
+                })
+                .catch((err) => {
+                    console.error(err);
+                    showToast("ไม่สามารถส่งข้อความได้", "error");
+                });
+        };
+
+        window.deleteChatMessage = (msgId) => {
+            if (!isAdminLoggedIn) return;
+            remove(ref(db, `volleyball_chat/${msgId}`))
+                .then(() => {
+                    showToast("ลบข้อความสนทนาเรียบร้อยแล้ว", "info");
+                })
+                .catch((err) => {
+                    console.error(err);
+                    showToast("ไม่สามารถลบข้อความได้", "error");
+                });
+        };
+
+        function renderChatMessages() {
+            const container = document.getElementById('chatMessages');
+            if (!container) return;
+
+            const msgKeys = Object.keys(allChatMessages).sort((a, b) => {
+                return (allChatMessages[a].timestamp || 0) - (allChatMessages[b].timestamp || 0);
+            });
+
+            if (msgKeys.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10 text-slate-400">
+                        <svg class="w-10 h-10 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                        </svg>
+                        <p class="font-medium text-xs">ยังไม่มีข้อความสนทนา</p>
+                        <p class="text-[10px]">พิมพ์ข้อความเพื่อเริ่มพูดคุยหรือสอบถามได้เลย!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = msgKeys.map(id => {
+                const msg = allChatMessages[id];
+                const isMsgAdmin = msg.isAdmin;
+                const dateStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}) : '';
+
+                const replyBlockHtml = msg.replyTo ? `
+                    <div class="mb-1.5 p-2 rounded-lg bg-slate-200/60 border-l-2 border-brand-500 text-[11px] text-slate-600">
+                        <span class="font-bold text-brand-700">${escapeHtml(msg.replyTo.name)}:</span> ${escapeHtml(msg.replyTo.text)}
+                    </div>
+                ` : '';
+
+                const adminBadgeHtml = isMsgAdmin ? `
+                    <span class="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded bg-amber-500 text-white text-[9px] font-bold">
+                        <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                        แอดมิน
+                    </span>
+                ` : '';
+
+                const actionsHtml = `
+                    <div class="flex items-center gap-1.5 mt-1">
+                        <button onclick="setChatReply('${id}', '${escapeHtml(msg.sender)}', '${escapeHtml(msg.text)}')" class="text-[10px] text-brand-600 hover:underline font-semibold">
+                            ตอบกลับ
+                        </button>
+                        ${isAdminLoggedIn ? `
+                            <button onclick="deleteChatMessage('${id}')" class="text-[10px] text-rose-500 hover:underline">
+                                ลบ
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+
+                return `
+                    <div class="p-3 rounded-xl ${isMsgAdmin ? 'bg-sky-50 border border-sky-200' : 'bg-white border border-slate-200'} shadow-2xs">
+                        <div class="flex items-center justify-between mb-1">
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-bold text-slate-800 text-xs">${escapeHtml(msg.sender)}</span>
+                                ${adminBadgeHtml}
+                            </div>
+                            <span class="text-[10px] text-slate-400">${dateStr}</span>
+                        </div>
+                        ${replyBlockHtml}
+                        <p class="text-slate-700 text-xs whitespace-pre-line leading-relaxed">${escapeHtml(msg.text)}</p>
+                        ${actionsHtml}
+                    </div>
+                `;
+            }).join('');
+
+            scrollChatToBottom();
+        }
+
+        function scrollChatToBottom() {
+            const container = document.getElementById('chatMessages');
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        // Admin Auth Toggle (Login / Logout)
+        window.handleAdminAuthToggle = () => {
+            if (isAdminLoggedIn) {
+                // Logout
+                isAdminLoggedIn = false;
+                showToast("ออกจากระบบผู้ดูแลเรียบร้อยแล้ว", "info");
+                updateAdminUI();
+                renderApp();
+                renderChatMessages();
+            } else {
+                // Open Login Modal
+                document.getElementById('loginUser').value = '';
+                document.getElementById('loginPass').value = '';
+                openModal('loginModal');
+            }
+        };
+
+        // Handle Admin Login Form
+        window.handleAdminLogin = (e) => {
+            e.preventDefault();
+            const u = document.getElementById('loginUser').value.trim();
+            const p = document.getElementById('loginPass').value.trim();
+
+            if (u === 'Jes' && p === 'Jes123') {
+                isAdminLoggedIn = true;
+                closeModal('loginModal');
+                showToast("เข้าสู่ระบบแอดมินสำเร็จ", "success");
+
+                // Auto preset admin chat name
+                const chatSender = document.getElementById('chatSenderName');
+                if (chatSender) chatSender.value = "ผู้ดูแลระบบ";
+
+                updateAdminUI();
+                renderApp();
+                renderChatMessages();
+            } else {
+                showToast("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", "error");
+            }
+        };
+
+        // Update Admin UI Components
+        function updateAdminUI() {
+            const adminBadge = document.getElementById('adminBadge');
+            const adminBtnText = document.getElementById('adminBtnText');
+            const adminBtnIcon = document.getElementById('adminBtnIcon');
+            const addPlayerBtn = document.getElementById('addPlayerBtn');
+            const emptyStateAddBtn = document.getElementById('emptyStateAddBtn');
+            const editAnnouncementBtn = document.getElementById('editAnnouncementBtn');
+
+            if (isAdminLoggedIn) {
+                adminBadge.classList.remove('hidden');
+                adminBadge.classList.add('flex');
+                adminBtnText.textContent = 'ออกจากระบบ';
+                adminBtnIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />`;
+                addPlayerBtn.classList.remove('hidden');
+                addPlayerBtn.classList.add('flex');
+                emptyStateAddBtn.classList.remove('hidden');
+                emptyStateAddBtn.classList.add('inline-flex');
+                editAnnouncementBtn.classList.remove('hidden');
+                editAnnouncementBtn.classList.add('inline-flex');
+            } else {
+                adminBadge.classList.add('hidden');
+                adminBadge.classList.remove('flex');
+                adminBtnText.textContent = 'เข้าสู่ระบบแอดมิน';
+                adminBtnIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>`;
+                addPlayerBtn.classList.add('hidden');
+                addPlayerBtn.classList.remove('flex');
+                emptyStateAddBtn.classList.add('hidden');
+                emptyStateAddBtn.classList.remove('inline-flex');
+                editAnnouncementBtn.classList.add('hidden');
+                editAnnouncementBtn.classList.remove('inline-flex');
+            }
+        }
+
+        // Category UI Highlight update
+        function updateCategoryUI() {
+            const catMap = {
+                'ประเภทกีฬาวอลเลย์บอลชายตอนต้น': 'catBtn-1',
+                'ประเภทกีฬาวอลเลย์บอลชายตอนปลาย': 'catBtn-2',
+                'ประเภทกีฬาวอลเลย์บอลหญิงตอนต้น': 'catBtn-3',
+                'ประเภทกีฬาวอลเลย์บอลหญิงตอนปลาย': 'catBtn-4'
+            };
+
+            const allBtn = document.getElementById('catBtn-all');
+            if (allBtn) {
+                if (currentCategory === 'ALL') {
+                    allBtn.className = "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-brand-600 text-white shadow-sm ring-2 ring-brand-300";
+                } else {
+                    allBtn.className = "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-slate-100 text-slate-700 hover:bg-slate-200";
+                }
+            }
+
+            Object.keys(catMap).forEach(catKey => {
+                const btn = document.getElementById(catMap[catKey]);
+                if (btn) {
+                    if (currentCategory === catKey) {
+                        btn.classList.add('border-brand-500', 'ring-2', 'ring-brand-200', 'bg-sky-50/50');
+                        btn.classList.remove('border-slate-200');
+                    } else {
+                        btn.classList.remove('border-brand-500', 'ring-2', 'ring-brand-200', 'bg-sky-50/50');
+                        btn.classList.add('border-slate-200');
+                    }
+                }
+            });
+
+            const filterLabel = document.getElementById('activeFilterText');
+            if (filterLabel) {
+                filterLabel.textContent = currentCategory === 'ALL' ? 'ทุกประเภทกีฬา (ทั้งหมด)' : currentCategory;
+            }
+        }
+
+        // Open Modal for Add/Edit Player
+        window.openPlayerModal = (id = null) => {
+            if (!isAdminLoggedIn) {
+                showToast("เฉพาะแอดมินเท่านั้นที่สามารถทำรายการนี้ได้", "error");
+                return;
+            }
+
+            const modalTitle = document.getElementById('modalTitle');
+            const playerIdInput = document.getElementById('playerId');
+            const nameInput = document.getElementById('playerFullName');
+            const numberInput = document.getElementById('playerNumber');
+            const gradeInput = document.getElementById('playerGrade');
+            const categorySelect = document.getElementById('playerCategory');
+            const imageInput = document.getElementById('playerImage');
+            const fileInput = document.getElementById('playerFileInput');
+
+            if (fileInput) fileInput.value = '';
+
+            if (id && allPlayers[id]) {
+                // Edit mode
+                const player = allPlayers[id];
+                modalTitle.textContent = "แก้ไขข้อมูลนักกีฬา";
+                playerIdInput.value = id;
+                nameInput.value = player.name || '';
+                numberInput.value = player.number || '';
+                gradeInput.value = player.grade || '';
+                categorySelect.value = player.category || 'ประเภทกีฬาวอลเลย์บอลชายตอนต้น';
+                imageInput.value = player.image || '';
+
+                // Radio status
+                const radios = document.getElementsByName('playerStatus');
+                radios.forEach(r => {
+                    r.checked = (r.value === player.status);
+                });
+
+                window.updateImagePreview(player.image);
+            } else {
+                // Add mode
+                modalTitle.textContent = "เพิ่มข้อมูลนักกีฬา";
+                playerIdInput.value = '';
+                document.getElementById('playerForm').reset();
+                if (currentCategory !== 'ALL') {
+                    categorySelect.value = currentCategory;
+                }
+                window.updateImagePreview('');
+            }
+
+            openModal('playerModal');
+        };
+
+        window.updateImagePreview = (url) => {
+            const preview = document.getElementById('modalImgPreview');
+            const statusText = document.getElementById('imgPreviewStatus');
+            if (url && url.trim() !== '') {
+                preview.src = url;
+                statusText.textContent = url.startsWith('data:') ? "ใช้รูปภาพจากไฟล์ในอุปกรณ์" : "ใช้รูปภาพจาก URL";
+            } else {
+                preview.src = "https://placehold.co/150x150/0284c7/ffffff?text=Player";
+                statusText.textContent = "ใช้รูปตัวอย่างเริ่มต้น";
+            }
+        };
+
+        // Handle Image File Selection with auto-compression
+        window.handleFileSelect = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                showToast("กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, WEBP)", "error");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    // Compress image using HTML5 Canvas for speed and lightweight database storage
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 500;
+                    const MAX_HEIGHT = 650;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height = Math.round(height * (MAX_WIDTH / width));
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width = Math.round(width * (MAX_HEIGHT / height));
+                            height = MAX_HEIGHT;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+                    document.getElementById('playerImage').value = compressedDataUrl;
+                    window.updateImagePreview(compressedDataUrl);
+                    showToast("อัปโหลดและปรับขนาดรูปภาพเรียบร้อยแล้ว", "success");
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        // Save Player (Create / Update in Firebase Realtime Database)
+        window.savePlayer = (e) => {
+            e.preventDefault();
+            if (!isAdminLoggedIn) return;
+
+            const id = document.getElementById('playerId').value;
+            const name = document.getElementById('playerFullName').value.trim();
+            const number = document.getElementById('playerNumber').value.trim();
+            const grade = document.getElementById('playerGrade').value.trim();
+            const category = document.getElementById('playerCategory').value;
+            const image = document.getElementById('playerImage').value.trim();
+            
+            const radios = document.getElementsByName('playerStatus');
+            let status = 'ตัวจริง';
+            radios.forEach(r => { if(r.checked) status = r.value; });
+
+            const playerData = {
+                name: name,
+                number: number,
+                grade: grade,
+                category: category,
+                status: status,
+                image: image || `https://placehold.co/300x400/0284c7/ffffff?text=${encodeURIComponent(name)}`,
+                updatedAt: Date.now()
+            };
+
+            if (id) {
+                // Update
+                update(ref(db, `volleyball_players/${id}`), playerData)
+                    .then(() => {
+                        showToast("อัปเดตข้อมูลนักกีฬาเรียบร้อยแล้ว", "success");
+                        closeModal('playerModal');
+                    })
+                    .catch((err) => {
+                        console.error(err);
+                        showToast("เกิดข้อผิดพลาดในการบันทึก", "error");
+                    });
+            } else {
+                // Add
+                const newRef = push(ref(db, 'volleyball_players'));
+                set(newRef, playerData)
+                    .then(() => {
+                        showToast("เพิ่มข้อมูลนักกีฬาใหม่เรียบร้อยแล้ว", "success");
+                        closeModal('playerModal');
+                    })
+                    .catch((err) => {
+                        console.error(err);
+                        showToast("เกิดข้อผิดพลาดในการเพิ่มข้อมูล", "error");
+                    });
+            }
+        };
+
+        // Custom Delete Dialog Trigger
+        window.promptDeletePlayer = (id) => {
+            if (!isAdminLoggedIn) return;
+            deleteTargetId = id;
+            
+            const confirmBtn = document.getElementById('confirmDeleteBtn');
+            confirmBtn.onclick = () => {
+                if (deleteTargetId) {
+                    remove(ref(db, `volleyball_players/${deleteTargetId}`))
+                        .then(() => {
+                            showToast("ลบข้อมูลนักกีฬาเรียบร้อยแล้ว", "success");
+                            closeModal('deleteModal');
+                            deleteTargetId = null;
+                        })
+                        .catch((err) => {
+                            console.error(err);
+                            showToast("เกิดข้อผิดพลาดในการลบข้อมูล", "error");
+                        });
+                }
+            };
+
+            openModal('deleteModal');
+        };
+
+        // Render Roster Grid & Stats
+        function renderApp() {
+            const grid = document.getElementById('playerGrid');
+            const emptyState = document.getElementById('emptyState');
+            const resultCountText = document.getElementById('resultCountText');
+
+            const playerKeys = Object.keys(allPlayers);
+
+            // Calculate category badges count
+            const counts = {
+                'ประเภทกีฬาวอลเลย์บอลชายตอนต้น': 0,
+                'ประเภทกีฬาวอลเลย์บอลชายตอนปลาย': 0,
+                'ประเภทกีฬาวอลเลย์บอลหญิงตอนต้น': 0,
+                'ประเภทกีฬาวอลเลย์บอลหญิงตอนปลาย': 0,
+                'total': 0,
+                'starters': 0,
+                'subs': 0
+            };
+
+            playerKeys.forEach(k => {
+                const p = allPlayers[k];
+                if (counts[p.category] !== undefined) counts[p.category]++;
+                counts.total++;
+                if (p.status === 'ตัวจริง') counts.starters++;
+                else if (p.status === 'ตัวสำรอง') counts.subs++;
+            });
+
+            // Update stats counter elements
+            document.getElementById('statTotal').textContent = counts.total;
+            document.getElementById('statStarters').textContent = counts.starters;
+            document.getElementById('statSubs').textContent = counts.subs;
+
+            // Update category badge numbers
+            const catMap = {
+                'ประเภทกีฬาวอลเลย์บอลชายตอนต้น': 'catBtn-1',
+                'ประเภทกีฬาวอลเลย์บอลชายตอนปลาย': 'catBtn-2',
+                'ประเภทกีฬาวอลเลย์บอลหญิงตอนต้น': 'catBtn-3',
+                'ประเภทกีฬาวอลเลย์บอลหญิงตอนปลาย': 'catBtn-4'
+            };
+            Object.keys(catMap).forEach(catKey => {
+                const btn = document.getElementById(catMap[catKey]);
+                if (btn) {
+                    const badge = btn.querySelector('.category-badge');
+                    if (badge) badge.textContent = counts[catKey] || 0;
+                }
+            });
+
+            // Filter players for display
+            let filteredKeys = playerKeys.filter(k => {
+                const p = allPlayers[k];
+                // Category Filter
+                if (currentCategory !== 'ALL' && p.category !== currentCategory) return false;
+                // Status Filter
+                if (currentStatusFilter !== 'ALL' && p.status !== currentStatusFilter) return false;
+                // Search Query
+                if (searchQuery) {
+                    const nameMatch = (p.name || '').toLowerCase().includes(searchQuery);
+                    const numMatch = (p.number || '').toString().includes(searchQuery);
+                    const gradeMatch = (p.grade || '').toLowerCase().includes(searchQuery);
+                    if (!nameMatch && !numMatch && !gradeMatch) return false;
+                }
+                return true;
+            });
+
+            resultCountText.textContent = `พบ ${filteredKeys.length} รายการ`;
+
+            if (filteredKeys.length === 0) {
+                grid.innerHTML = '';
+                grid.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
+            grid.classList.remove('hidden');
+
+            // Render Player Cards
+            grid.innerHTML = filteredKeys.map(id => {
+                const p = allPlayers[id];
+                const isStarter = (p.status === 'ตัวจริง');
+                const isMale = (p.category && p.category.includes('ชาย'));
+
+                const genderBadgeHtml = isMale 
+                    ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/20 backdrop-blur-md text-[10px] font-bold text-sky-200 border border-blue-400/30">
+                        <svg class="w-3 h-3 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle cx="9.5" cy="14.5" r="4.5" stroke-width="2"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 11.5l6-6M15 5.5h4v4"/>
+                        </svg>
+                        ชาย
+                       </span>`
+                    : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-pink-500/20 backdrop-blur-md text-[10px] font-bold text-pink-200 border border-pink-400/30">
+                        <svg class="w-3 h-3 text-pink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="9.5" r="4.5" stroke-width="2"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14v6m-3-3h6"/>
+                        </svg>
+                        หญิง
+                       </span>`;
+
+                const statusBadgeHtml = isStarter 
+                    ? `<span class="badge-starter text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-md">
+                        <svg class="w-3.5 h-3.5 text-yellow-200" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                        </svg>
+                        ตัวจริง
+                       </span>`
+                    : `<span class="badge-substitute text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-md">
+                        <svg class="w-3.5 h-3.5 text-sky-200" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clip-rule="evenodd"/>
+                        </svg>
+                        ตัวสำรอง
+                       </span>`;
+
+                const adminActionsHtml = isAdminLoggedIn ? `
+                    <div class="absolute bottom-3 right-3 flex items-center gap-1.5 z-20">
+                        <button 
+                            onclick="openPlayerModal('${id}')" 
+                            title="แก้ไขข้อมูล" 
+                            class="p-2 rounded-lg bg-white/90 hover:bg-brand-600 hover:text-white text-slate-700 shadow-md backdrop-blur-sm transition-all duration-150"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                        </button>
+                        <button 
+                            onclick="promptDeletePlayer('${id}')" 
+                            title="ลบข้อมูล" 
+                            class="p-2 rounded-lg bg-white/90 hover:bg-rose-600 hover:text-white text-slate-700 shadow-md backdrop-blur-sm transition-all duration-150"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>
+                ` : '';
+
+                return `
+                    <div class="player-card-frame ${isStarter ? 'status-starter' : ''} rounded-2xl overflow-hidden shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col group">
+                        
+                        <!-- Player Image & Top Overlay Badges -->
+                        <div class="relative w-full aspect-[4/5] overflow-hidden bg-slate-100">
+                            <img 
+                                src="${escapeHtml(p.image)}" 
+                                alt="${escapeHtml(p.name)}" 
+                                class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                                onerror="this.src='https://placehold.co/300x400/0284c7/ffffff?text=${encodeURIComponent(p.name || 'Player')}';"
+                            >
+
+                            <!-- Gradient Protection Overlay -->
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/20"></div>
+
+                            <!-- Jersey Number (Top Left) -->
+                            <div class="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md text-white border border-white/20 rounded-xl px-3 py-1 flex items-center gap-1 shadow-lg">
+                                <span class="text-[10px] text-slate-300 font-semibold uppercase tracking-wider">NO.</span>
+                                <span class="text-base font-extrabold text-amber-400">${escapeHtml(p.number || '-')}</span>
+                            </div>
+
+                            <!-- Status Badge (Top Right) -->
+                            <div class="absolute top-3 right-3">
+                                ${statusBadgeHtml}
+                            </div>
+
+                            <!-- Category & Gender Badge (Bottom Left Overlay) -->
+                            <div class="absolute bottom-3 left-3 right-3 text-white">
+                                <div class="flex items-center gap-1.5 mb-1">
+                                    <span class="inline-block px-2.5 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[10px] font-medium text-sky-100 border border-white/20">
+                                        ${escapeHtml(p.category)}
+                                    </span>
+                                    ${genderBadgeHtml}
+                                </div>
+                                <h3 class="text-base sm:text-lg font-bold leading-tight drop-shadow-md text-white">
+                                    ${escapeHtml(p.name)}
+                                </h3>
+                            </div>
+
+                            ${adminActionsHtml}
+                        </div>
+
+                        <!-- Card Body (Details) -->
+                        <div class="p-4 bg-white flex-grow flex items-center justify-between border-t border-slate-100">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-lg bg-sky-50 text-brand-600 flex items-center justify-center font-bold text-xs">
+                                    ชั้น
+                                </div>
+                                <div>
+                                    <div class="text-[10px] text-slate-400 uppercase font-semibold">ระดับชั้นเรียน</div>
+                                    <div class="text-xs font-bold text-slate-700">${escapeHtml(p.grade || '-')}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-right">
+                                <div class="text-[10px] text-slate-400 uppercase font-semibold">สังกัดทีม</div>
+                                <div class="text-xs font-bold text-emerald-600 flex items-center justify-end gap-1">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                    ทีมสีเขียว
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Helper Utility Functions
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[m];
+            });
+        }
+
+        window.openModal = (id) => {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('hidden');
+        };
+
+        window.closeModal = (id) => {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
+        };
+
+        window.showToast = (msg, type = 'info') => {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let bgClass = "bg-slate-800 text-white";
+            if (type === 'success') bgClass = "bg-emerald-600 text-white";
+            if (type === 'error') bgClass = "bg-rose-600 text-white";
+
+            toast.className = `${bgClass} px-4 py-3 rounded-xl shadow-xl text-xs sm:text-sm font-medium flex items-center gap-2 transform transition-all duration-300 translate-y-2 opacity-0 pointer-events-auto`;
+            toast.innerHTML = `
+                <span>${escapeHtml(msg)}</span>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        };
+    </script>
+</body>
+</html>
