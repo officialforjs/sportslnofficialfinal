@@ -560,7 +560,37 @@
 
         <!-- Player Cards Roster Grid -->
         <section id="playerGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <!-- Dynamic Content or Empty State inserted via JavaScript -->
+            <!-- Initial Skeleton Loading State -->
+            <div id="skeletonLoader" class="contents">
+                <div class="animate-pulse bg-white rounded-2xl p-4 shadow-sm border border-slate-200 h-[380px] flex flex-col justify-between">
+                    <div class="bg-slate-200 h-60 rounded-xl w-full"></div>
+                    <div class="space-y-2 mt-3">
+                        <div class="bg-slate-200 h-4 rounded w-3/4"></div>
+                        <div class="bg-slate-200 h-3 rounded w-1/2"></div>
+                    </div>
+                </div>
+                <div class="animate-pulse bg-white rounded-2xl p-4 shadow-sm border border-slate-200 h-[380px] flex flex-col justify-between hidden sm:flex">
+                    <div class="bg-slate-200 h-60 rounded-xl w-full"></div>
+                    <div class="space-y-2 mt-3">
+                        <div class="bg-slate-200 h-4 rounded w-3/4"></div>
+                        <div class="bg-slate-200 h-3 rounded w-1/2"></div>
+                    </div>
+                </div>
+                <div class="animate-pulse bg-white rounded-2xl p-4 shadow-sm border border-slate-200 h-[380px] flex flex-col justify-between hidden lg:flex">
+                    <div class="bg-slate-200 h-60 rounded-xl w-full"></div>
+                    <div class="space-y-2 mt-3">
+                        <div class="bg-slate-200 h-4 rounded w-3/4"></div>
+                        <div class="bg-slate-200 h-3 rounded w-1/2"></div>
+                    </div>
+                </div>
+                <div class="animate-pulse bg-white rounded-2xl p-4 shadow-sm border border-slate-200 h-[380px] flex flex-col justify-between hidden xl:flex">
+                    <div class="bg-slate-200 h-60 rounded-xl w-full"></div>
+                    <div class="space-y-2 mt-3">
+                        <div class="bg-slate-200 h-4 rounded w-3/4"></div>
+                        <div class="bg-slate-200 h-3 rounded w-1/2"></div>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- Empty State Container -->
@@ -1891,7 +1921,7 @@
             }
         };
 
-        // Handle Image File Selection with auto-compression
+        // Handle Image File Selection with high compression for speed optimization
         window.handleFileSelect = (event) => {
             const file = event.target.files[0];
             if (!file) return;
@@ -1906,8 +1936,9 @@
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 500;
-                    const MAX_HEIGHT = 650;
+                    // Optimized dimensions & quality for ultra-fast database fetching
+                    const MAX_WIDTH = 340;
+                    const MAX_HEIGHT = 440;
                     let width = img.width;
                     let height = img.height;
 
@@ -1928,10 +1959,11 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+                    // 0.65 quality compresses output to ~20-30KB per image
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.65);
                     document.getElementById('playerImage').value = compressedDataUrl;
                     window.updateImagePreview(compressedDataUrl);
-                    showToast("อัปโหลดและปรับขนาดรูปภาพเรียบร้อยแล้ว", "success");
+                    showToast("อัปโหลดและบีบอัดรูปภาพความเร็วสูงเรียบร้อยแล้ว", "success");
                 };
                 img.src = e.target.result;
             };
@@ -2184,6 +2216,7 @@
                             <img 
                                 src="${escapeHtml(p.image)}" 
                                 alt="${escapeHtml(p.name)}" 
+                                loading="lazy"
                                 class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
                                 onerror="this.src='https://placehold.co/300x400/0284c7/ffffff?text=${encodeURIComponent(p.name || 'Player')}';"
                             >
