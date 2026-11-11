@@ -39,7 +39,28 @@
                     }
                 }
             }
-        }
+        };
+
+        // Early fallback stubs to prevent ReferenceError before ES module finishes loading
+        window.selectCategory = function(category) {
+            window._pendingCategory = category;
+            if (typeof window._realSelectCategory === 'function') window._realSelectCategory(category);
+        };
+        window.setStatusFilter = function(status) {
+            window._pendingStatus = status;
+            if (typeof window._realSetStatusFilter === 'function') window._realSetStatusFilter(status);
+        };
+        window.handleSearch = function() { if (typeof window._realHandleSearch === 'function') window._realHandleSearch(); };
+        window.clearSearchInput = function() { if (typeof window._realClearSearchInput === 'function') window._realClearSearchInput(); };
+        window.toggleNotifCenter = function() { if (typeof window._realToggleNotifCenter === 'function') window._realToggleNotifCenter(); };
+        window.toggleChatDrawer = function() { if (typeof window._realToggleChatDrawer === 'function') window._realToggleChatDrawer(); };
+        window.handleAdminAuthToggle = function() { if (typeof window._realHandleAdminAuthToggle === 'function') window._realHandleAdminAuthToggle(); };
+        window.openPlayerModal = function(id) { if (typeof window._realOpenPlayerModal === 'function') window._realOpenPlayerModal(id); };
+        window.openAnnouncementModal = function() { if (typeof window._realOpenAnnouncementModal === 'function') window._realOpenAnnouncementModal(); };
+        window.closeModal = function(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
+        };
     </script>
     
     <style>
@@ -496,7 +517,7 @@
                         type="text" 
                         id="searchInput"
                         oninput="handleSearch()"
-                        placeholder="ค้นหาชื่อ หรือ หมายเลขเสื้อ..." 
+                        placeholder="ค้นหาชื่อ หรือ ชั้นเรียน..." 
                         class="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-slate-50 focus:bg-white transition-all"
                     >
                     <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -974,6 +995,23 @@
         </div>
     </div>
 
+    <!-- Offline Overlay Modal (แจ้งเตือนและระงับใช้งานเมื่อไม่มีอินเทอร์เน็ต) -->
+    <div id="offlineOverlay" class="fixed inset-0 z-50 hidden flex-col items-center justify-center p-6 bg-slate-900/85 backdrop-blur-md text-white text-center transition-all duration-300">
+        <div class="w-20 h-20 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mb-4 ring-8 ring-rose-500/10 animate-bounce">
+            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m2.829 2.829L18 18M3 3l18 18M9.172 9.172a4 4 0 015.656 0M6.343 6.343a9 9 0 0112.728 0"/>
+            </svg>
+        </div>
+        <h2 class="text-2xl font-extrabold tracking-tight mb-2">ไม่มีการเชื่อมต่ออินเทอร์เน็ต</h2>
+        <p class="text-slate-300 text-sm max-w-md mb-6 leading-relaxed">
+            แอปพลิเคชันระงับการใช้งานชั่วคราวเนื่องจากขาดการเชื่อมต่ออินเทอร์เน็ต กรุณาตรวจสอบสัญญาณเน็ตหรือ Wi-Fi ของท่าน ระบบจะกลับมาใช้งานได้โดยอัตโนมัติเมื่อกลับมาออนไลน์
+        </p>
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800 border border-slate-700 text-amber-400 text-xs font-semibold shadow-lg">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 pulse-dot"></span>
+            กำลังรอสัญญาณอินเทอร์เน็ตกลับมา...
+        </div>
+    </div>
+
 
     <!-- ================= FIREBASE SDK & APPLICATION LOGIC ================= -->
     <script type="module">
@@ -993,41 +1031,92 @@
             measurementId: "G-GMXJ8WHHMS"
         };
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        const playersRef = ref(db, 'volleyball_players');
-        const announcementRef = ref(db, 'volleyball_announcement');
-        const chatRef = ref(db, 'volleyball_chat');
-        const fcmTokensRef = ref(db, 'volleyball_fcm_tokens');
-        const connectedRef = ref(db, '.info/connected');
+        // Initialize Firebase safely
+        let app, db, playersRef, announcementRef, chatRef, fcmTokensRef, connectedRef;
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getDatabase(app);
+            playersRef = ref(db, 'volleyball_players');
+            announcementRef = ref(db, 'volleyball_announcement');
+            chatRef = ref(db, 'volleyball_chat');
+            fcmTokensRef = ref(db, 'volleyball_fcm_tokens');
+            connectedRef = ref(db, '.info/connected');
+        } catch (err) {
+            console.error("Firebase initialization error:", err);
+        }
 
         // Application State
         let allPlayers = {};
         let currentAnnouncement = null;
         let allChatMessages = {};
         let activeReplyTo = null; // { id, name, text }
-        let currentCategory = 'ALL';
-        let currentStatusFilter = 'ALL';
+        let currentCategory = window._pendingCategory || 'ALL';
+        let currentStatusFilter = window._pendingStatus || 'ALL';
         let searchQuery = '';
         let isAdminLoggedIn = false;
         let deleteTargetId = null;
 
-        // Realtime Network Connection Monitor (.info/connected)
-        onValue(connectedRef, (snap) => {
-            const isConnected = snap.val() === true;
-            const dot = document.getElementById('connDot');
-            const text = document.getElementById('connText');
-            if (dot && text) {
-                if (isConnected) {
-                    dot.className = "w-2 h-2 rounded-full bg-emerald-500 pulse-dot";
-                    text.textContent = "ออนไลน์";
+        // Immediately attach real handlers to window
+        window._realSelectCategory = (category) => {
+            currentCategory = category;
+            updateCategoryUI();
+            renderApp();
+        };
+        window.selectCategory = window._realSelectCategory;
+
+        window._realSetStatusFilter = (status) => {
+            currentStatusFilter = status;
+            updateStatusFilterUI();
+            renderApp();
+        };
+        window.setStatusFilter = window._realSetStatusFilter;
+
+        // Realtime Network Connection Monitor (.info/connected) & Offline Guard
+        function handleOnlineStatusChange(isOnline) {
+            const overlay = document.getElementById('offlineOverlay');
+            if (overlay) {
+                if (!isOnline) {
+                    overlay.classList.remove('hidden');
+                    overlay.classList.add('flex');
                 } else {
-                    dot.className = "w-2 h-2 rounded-full bg-rose-500";
-                    text.textContent = "ออฟไลน์";
+                    overlay.classList.add('hidden');
+                    overlay.classList.remove('flex');
                 }
             }
+        }
+
+        window.addEventListener('online', () => {
+            handleOnlineStatusChange(true);
+            showToast("กลับมาเชื่อมต่ออินเทอร์เน็ตแล้ว!", "success");
         });
+
+        window.addEventListener('offline', () => {
+            handleOnlineStatusChange(false);
+            showToast("ขาดการเชื่อมต่ออินเทอร์เน็ต! ระงับใช้งานชั่วคราว", "error");
+        });
+
+        if (connectedRef) {
+            onValue(connectedRef, (snap) => {
+                const isConnected = snap.val() === true && navigator.onLine;
+                const dot = document.getElementById('connDot');
+                const text = document.getElementById('connText');
+                if (dot && text) {
+                    if (isConnected) {
+                        dot.className = "w-2 h-2 rounded-full bg-emerald-500 pulse-dot";
+                        text.textContent = "ออนไลน์";
+                    } else {
+                        dot.className = "w-2 h-2 rounded-full bg-rose-500";
+                        text.textContent = "ออฟไลน์";
+                    }
+                }
+                handleOnlineStatusChange(isConnected);
+            });
+        }
+
+        // Initial connection check on page load
+        if (!navigator.onLine) {
+            handleOnlineStatusChange(false);
+        }
 
         // Global Keyboard Shortcut: Close active modals via Escape key
         window.addEventListener('keydown', (e) => {
@@ -1086,7 +1175,7 @@
             });
         `;
 
-        // Initialize Firebase Messaging & Register Service Worker
+        // Initialize Firebase Messaging & Register Service Worker safely
         async function setupFirebaseMessaging() {
             if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
                 console.warn('Browser does not support Service Worker & Web Push API');
@@ -1097,21 +1186,22 @@
                 const blob = new Blob([swScriptCode], { type: 'application/javascript' });
                 const swUrl = URL.createObjectURL(blob);
                 swRegistration = await navigator.serviceWorker.register(swUrl);
-                console.log('FCM Service Worker Registered successfully:', swRegistration);
 
-                messaging = getMessaging(app);
-
-                // Listen for foreground Web Push notifications
-                onMessage(messaging, (payload) => {
-                    console.log('Foreground FCM Message received:', payload);
-                    const title = payload.notification?.title || 'การแจ้งเตือนจากระบบ';
-                    const body = payload.notification?.body || '';
-                    addInAppNotification(title, body, 'info');
-                });
+                try {
+                    messaging = getMessaging(app);
+                    onMessage(messaging, (payload) => {
+                        console.log('Foreground FCM Message received:', payload);
+                        const title = payload.notification?.title || 'การแจ้งเตือนจากระบบ';
+                        const body = payload.notification?.body || '';
+                        addInAppNotification(title, body, 'info');
+                    });
+                } catch (mErr) {
+                    console.warn('FCM Messaging initialization skipped:', mErr);
+                }
 
                 return true;
             } catch (err) {
-                console.error('Service Worker / FCM setup error:', err);
+                console.warn('Service Worker / FCM setup error:', err);
                 return false;
             }
         }
@@ -1140,9 +1230,6 @@
                             });
 
                             if (fcmToken) {
-                                console.log("Generated FCM Web Push Token:", fcmToken);
-                                
-                                // Save device token to Firebase Realtime Database
                                 const sanitizedTokenKey = fcmToken.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 80);
                                 const tokenRef = ref(db, `volleyball_fcm_tokens/${sanitizedTokenKey}`);
                                 await set(tokenRef, {
@@ -1153,7 +1240,7 @@
                                 showToast("เชื่อมต่อรับ Push Token สำเร็จ!", "success");
                             }
                         } catch (tokErr) {
-                            console.log("FCM Token notice (VAPID key optional):", tokErr);
+                            console.warn("FCM Token notice:", tokErr);
                         }
                     }
 
@@ -1166,22 +1253,9 @@
             }
         };
 
-        // Define core event handlers on window at startup for inline HTML attributes
-        window.selectCategory = (category) => {
-            currentCategory = category;
-            updateCategoryUI();
-            renderApp();
-        };
-
-        window.setStatusFilter = (status) => {
-            currentStatusFilter = status;
-            updateStatusFilterUI();
-            renderApp();
-        };
-
         // Debounced Search Handler for Enhanced Performance on Low-End Devices
         let searchTimeout = null;
-        window.handleSearch = () => {
+        window._realHandleSearch = () => {
             const inputEl = document.getElementById('searchInput');
             const clearBtn = document.getElementById('clearSearchBtn');
             const val = inputEl ? inputEl.value : '';
@@ -1200,8 +1274,9 @@
                 renderApp();
             }, 100);
         };
+        window.handleSearch = window._realHandleSearch;
 
-        window.clearSearchInput = () => {
+        window._realClearSearchInput = () => {
             const inputEl = document.getElementById('searchInput');
             if (inputEl) {
                 inputEl.value = '';
@@ -1209,6 +1284,7 @@
                 inputEl.focus();
             }
         };
+        window.clearSearchInput = window._realClearSearchInput;
 
         function sendNativeNotification(title, body) {
             if ("Notification" in window && Notification.permission === "granted") {
@@ -1265,7 +1341,7 @@
         }
 
         // In-App Notification Center Functions
-        window.toggleNotifCenter = () => {
+        window._realToggleNotifCenter = () => {
             const panel = document.getElementById('notifCenterPanel');
             if (panel) {
                 panel.classList.toggle('hidden');
@@ -1273,6 +1349,7 @@
                 updateNativeNotifBtnUI();
             }
         };
+        window.toggleNotifCenter = window._realToggleNotifCenter;
 
         window.markAllNotifsRead = () => {
             notifications.forEach(n => n.read = true);
@@ -1374,43 +1451,49 @@
         }
 
         // Initialize Realtime Listeners with In-App Alerts
-        onValue(playersRef, (snapshot) => {
-            const data = snapshot.val();
-            allPlayers = data || {};
-            if (!isInitialPlayersLoad) {
-                addInAppNotification("อัปเดตข้อมูลนักกีฬา", "มีการเปลี่ยนแปลงรายชื่อในทำเนียบนักกีฬา", "success");
-            }
-            isInitialPlayersLoad = false;
-            renderApp();
-        }, (error) => {
-            console.error("Firebase Database Error:", error);
-            showToast("ไม่สามารถเชื่อมต่อฐานข้อมูลนักกีฬาได้", "error");
-            renderApp();
-        });
+        if (playersRef) {
+            onValue(playersRef, (snapshot) => {
+                const data = snapshot.val();
+                allPlayers = data || {};
+                if (!isInitialPlayersLoad) {
+                    addInAppNotification("อัปเดตข้อมูลนักกีฬา", "มีการเปลี่ยนแปลงรายชื่อในทำเนียบนักกีฬา", "success");
+                }
+                isInitialPlayersLoad = false;
+                renderApp();
+            }, (error) => {
+                console.error("Firebase Database Error:", error);
+                showToast("ไม่สามารถเชื่อมต่อฐานข้อมูลนักกีฬาได้", "error");
+                renderApp();
+            });
+        }
 
         // Realtime Listener for Announcement
-        onValue(announcementRef, (snapshot) => {
-            currentAnnouncement = snapshot.val();
-            if (!isInitialAnnounceLoad && currentAnnouncement?.title) {
-                addInAppNotification("ประกาศใหม่จากแอดมิน", currentAnnouncement.title, "info");
-            }
-            isInitialAnnounceLoad = false;
-            renderAnnouncement();
-        });
+        if (announcementRef) {
+            onValue(announcementRef, (snapshot) => {
+                currentAnnouncement = snapshot.val();
+                if (!isInitialAnnounceLoad && currentAnnouncement?.title) {
+                    addInAppNotification("ประกาศใหม่จากแอดมิน", currentAnnouncement.title, "info");
+                }
+                isInitialAnnounceLoad = false;
+                renderAnnouncement();
+            });
+        }
 
         // Realtime Listener for Chat Messages
-        onValue(chatRef, (snapshot) => {
-            allChatMessages = snapshot.val() || {};
-            if (!isInitialChatLoad) {
-                const keys = Object.keys(allChatMessages);
-                if (keys.length > 0) {
-                    const latest = allChatMessages[keys[keys.length - 1]];
-                    addInAppNotification("ข้อความใหม่ในกระดานพูดคุย", `${latest.sender}: ${latest.text}`, "info");
+        if (chatRef) {
+            onValue(chatRef, (snapshot) => {
+                allChatMessages = snapshot.val() || {};
+                if (!isInitialChatLoad) {
+                    const keys = Object.keys(allChatMessages);
+                    if (keys.length > 0) {
+                        const latest = allChatMessages[keys[keys.length - 1]];
+                        addInAppNotification("ข้อความใหม่ในกระดานพูดคุย", `${latest.sender}: ${latest.text}`, "info");
+                    }
                 }
-            }
-            isInitialChatLoad = false;
-            renderChatMessages();
-        });
+                isInitialChatLoad = false;
+                renderChatMessages();
+            });
+        }
 
         function updateStatusFilterUI() {
             const statuses = ['ALL', 'ตัวจริง', 'ตัวสำรอง'];
@@ -1427,7 +1510,7 @@
         }
 
         // Toggle Live Chat Drawer
-        window.toggleChatDrawer = () => {
+        window._realToggleChatDrawer = () => {
             const drawer = document.getElementById('chatDrawer');
             if (drawer) {
                 drawer.classList.toggle('hidden');
@@ -1437,18 +1520,20 @@
                 }
             }
         };
+        window.toggleChatDrawer = window._realToggleChatDrawer;
 
         // Announcement Modal Controls
-        window.openAnnouncementModal = () => {
+        window._realOpenAnnouncementModal = () => {
             if (!isAdminLoggedIn) return;
             document.getElementById('announcementTitleInput').value = currentAnnouncement?.title || '';
             document.getElementById('announcementTextInput').value = currentAnnouncement?.text || '';
             openModal('announcementModal');
         };
+        window.openAnnouncementModal = window._realOpenAnnouncementModal;
 
         window.saveAnnouncement = (e) => {
             e.preventDefault();
-            if (!isAdminLoggedIn) return;
+            if (!isAdminLoggedIn || !announcementRef) return;
             const title = document.getElementById('announcementTitleInput').value.trim();
             const text = document.getElementById('announcementTextInput').value.trim();
             
@@ -1516,7 +1601,7 @@
             const senderName = senderNameInput.value.trim();
             const message = messageInput.value.trim();
 
-            if (!senderName || !message) return;
+            if (!senderName || !message || !chatRef) return;
 
             const newMsgRef = push(chatRef);
             const msgData = {
@@ -1540,7 +1625,7 @@
         };
 
         window.deleteChatMessage = (msgId) => {
-            if (!isAdminLoggedIn) return;
+            if (!isAdminLoggedIn || !db) return;
             remove(ref(db, `volleyball_chat/${msgId}`))
                 .then(() => {
                     showToast("ลบข้อความสนทนาเรียบร้อยแล้ว", "info");
@@ -1632,7 +1717,7 @@
         }
 
         // Admin Auth Toggle (Login / Logout)
-        window.handleAdminAuthToggle = () => {
+        window._realHandleAdminAuthToggle = () => {
             if (isAdminLoggedIn) {
                 // Logout
                 isAdminLoggedIn = false;
@@ -1647,6 +1732,7 @@
                 openModal('loginModal');
             }
         };
+        window.handleAdminAuthToggle = window._realHandleAdminAuthToggle;
 
         // Handle Admin Login Form
         window.handleAdminLogin = (e) => {
@@ -1743,7 +1829,7 @@
         }
 
         // Open Modal for Add/Edit Player
-        window.openPlayerModal = (id = null) => {
+        window._realOpenPlayerModal = (id = null) => {
             if (!isAdminLoggedIn) {
                 showToast("เฉพาะแอดมินเท่านั้นที่สามารถทำรายการนี้ได้", "error");
                 return;
@@ -1791,6 +1877,7 @@
 
             openModal('playerModal');
         };
+        window.openPlayerModal = window._realOpenPlayerModal;
 
         window.updateImagePreview = (url) => {
             const preview = document.getElementById('modalImgPreview');
@@ -1818,7 +1905,6 @@
             reader.onload = (e) => {
                 const img = new Image();
                 img.onload = () => {
-                    // Compress image using HTML5 Canvas for speed and lightweight database storage
                     const canvas = document.createElement('canvas');
                     const MAX_WIDTH = 500;
                     const MAX_HEIGHT = 650;
@@ -1855,7 +1941,7 @@
         // Save Player (Create / Update in Firebase Realtime Database)
         window.savePlayer = (e) => {
             e.preventDefault();
-            if (!isAdminLoggedIn) return;
+            if (!isAdminLoggedIn || !playersRef) return;
 
             const submitBtn = e.target.querySelector('button[type="submit"]');
             if (submitBtn) {
@@ -1921,7 +2007,7 @@
 
         // Custom Delete Dialog Trigger
         window.promptDeletePlayer = (id) => {
-            if (!isAdminLoggedIn) return;
+            if (!isAdminLoggedIn || !db) return;
             deleteTargetId = id;
             
             const confirmBtn = document.getElementById('confirmDeleteBtn');
@@ -1997,19 +2083,24 @@
                 if (currentCategory !== 'ALL' && p.category !== currentCategory) return false;
                 // Status Filter
                 if (currentStatusFilter !== 'ALL' && p.status !== currentStatusFilter) return false;
-                // Search Query: ค้นหาเจาะจงเฉพาะชื่อ หมายเลขเสื้อ และชั้นเรียนเท่านั้น
+                // Search Query (ค้นหาเฉพาะ ชื่อ หรือ ชั้นเรียน)
                 if (searchQuery) {
                     const cleanName = (p.name || '').toLowerCase();
-                    const cleanNum = (p.number || '').toString().trim();
                     const cleanGrade = (p.grade || '').toLowerCase();
 
                     const nameMatch = cleanName.includes(searchQuery);
-                    const numMatch = cleanNum === searchQuery || cleanNum.includes(searchQuery);
                     const gradeMatch = cleanGrade.includes(searchQuery);
 
-                    if (!nameMatch && !numMatch && !gradeMatch) return false;
+                    if (!nameMatch && !gradeMatch) return false;
                 }
                 return true;
+            });
+
+            // Sort by Jersey Number (Ascending)
+            filteredKeys.sort((aKey, bKey) => {
+                const numA = parseInt(allPlayers[aKey]?.number, 10) || 0;
+                const numB = parseInt(allPlayers[bKey]?.number, 10) || 0;
+                return numA - numB;
             });
 
             resultCountText.textContent = `พบ ${filteredKeys.length} รายการ`;
