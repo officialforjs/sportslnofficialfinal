@@ -135,6 +135,12 @@
 
                 <!-- Admin Action Button & Status -->
                 <div class="flex items-center gap-2">
+                    <!-- Network Connection Indicator (แสดงสถานะออนไลน์/ออฟไลน์) -->
+                    <div id="connBadge" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-[11px] font-medium" title="สถานะการเชื่อมต่อฐานข้อมูล Firebase">
+                        <span id="connDot" class="w-2 h-2 rounded-full bg-slate-400"></span>
+                        <span id="connText">กำลังเชื่อมต่อ...</span>
+                    </div>
+
                     <div id="adminBadge" class="hidden items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-dot"></span>
                         สถานะ: แอดมิน
@@ -491,11 +497,21 @@
                         id="searchInput"
                         oninput="handleSearch()"
                         placeholder="ค้นหาชื่อ หรือ หมายเลขเสื้อ..." 
-                        class="w-full pl-9 pr-4 py-2 text-xs sm:text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-slate-50 focus:bg-white transition-all"
+                        class="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-slate-50 focus:bg-white transition-all"
                     >
                     <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
+                    <button 
+                        id="clearSearchBtn" 
+                        onclick="clearSearchInput()" 
+                        class="hidden absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                        title="ล้างคำค้นหา"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
                 </div>
 
                 <!-- Admin Add Player Trigger (Visible only for Admin) -->
@@ -984,6 +1000,7 @@
         const announcementRef = ref(db, 'volleyball_announcement');
         const chatRef = ref(db, 'volleyball_chat');
         const fcmTokensRef = ref(db, 'volleyball_fcm_tokens');
+        const connectedRef = ref(db, '.info/connected');
 
         // Application State
         let allPlayers = {};
@@ -995,6 +1012,33 @@
         let searchQuery = '';
         let isAdminLoggedIn = false;
         let deleteTargetId = null;
+
+        // Realtime Network Connection Monitor (.info/connected)
+        onValue(connectedRef, (snap) => {
+            const isConnected = snap.val() === true;
+            const dot = document.getElementById('connDot');
+            const text = document.getElementById('connText');
+            if (dot && text) {
+                if (isConnected) {
+                    dot.className = "w-2 h-2 rounded-full bg-emerald-500 pulse-dot";
+                    text.textContent = "ออนไลน์";
+                } else {
+                    dot.className = "w-2 h-2 rounded-full bg-rose-500";
+                    text.textContent = "ออฟไลน์";
+                }
+            }
+        });
+
+        // Global Keyboard Shortcut: Close active modals via Escape key
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                ['announcementModal', 'loginModal', 'playerModal', 'deleteModal'].forEach(id => closeModal(id));
+                const notifPanel = document.getElementById('notifCenterPanel');
+                if (notifPanel && !notifPanel.classList.contains('hidden')) {
+                    notifPanel.classList.add('hidden');
+                }
+            }
+        });
 
         // In-App & FCM Push Notification State
         let notifications = [];
@@ -1135,9 +1179,35 @@
             renderApp();
         };
 
+        // Debounced Search Handler for Enhanced Performance on Low-End Devices
+        let searchTimeout = null;
         window.handleSearch = () => {
-            searchQuery = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
-            renderApp();
+            const inputEl = document.getElementById('searchInput');
+            const clearBtn = document.getElementById('clearSearchBtn');
+            const val = inputEl ? inputEl.value : '';
+
+            if (clearBtn) {
+                if (val.trim().length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                }
+            }
+
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchQuery = val.trim().toLowerCase();
+                renderApp();
+            }, 100);
+        };
+
+        window.clearSearchInput = () => {
+            const inputEl = document.getElementById('searchInput');
+            if (inputEl) {
+                inputEl.value = '';
+                window.handleSearch();
+                inputEl.focus();
+            }
         };
 
         function sendNativeNotification(title, body) {
@@ -1282,7 +1352,12 @@
 
         function playAudioChime(type) {
             try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+                if (ctx.state === 'suspended') {
+                    ctx.resume();
+                }
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 osc.type = 'sine';
@@ -1293,7 +1368,9 @@
                 gain.connect(ctx.destination);
                 osc.start();
                 osc.stop(ctx.currentTime + 0.3);
-            } catch (e) {}
+            } catch (e) {
+                console.warn('Audio chime safely skipped:', e);
+            }
         }
 
         // Initialize Realtime Listeners with In-App Alerts
@@ -1780,6 +1857,12 @@
             e.preventDefault();
             if (!isAdminLoggedIn) return;
 
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = "กำลังบันทึก...";
+            }
+
             const id = document.getElementById('playerId').value;
             const name = document.getElementById('playerFullName').value.trim();
             const number = document.getElementById('playerNumber').value.trim();
@@ -1801,6 +1884,13 @@
                 updatedAt: Date.now()
             };
 
+            const resetSubmitBtn = () => {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = "บันทึกข้อมูล";
+                }
+            };
+
             if (id) {
                 // Update
                 update(ref(db, `volleyball_players/${id}`), playerData)
@@ -1811,7 +1901,8 @@
                     .catch((err) => {
                         console.error(err);
                         showToast("เกิดข้อผิดพลาดในการบันทึก", "error");
-                    });
+                    })
+                    .finally(resetSubmitBtn);
             } else {
                 // Add
                 const newRef = push(ref(db, 'volleyball_players'));
@@ -1823,7 +1914,8 @@
                     .catch((err) => {
                         console.error(err);
                         showToast("เกิดข้อผิดพลาดในการเพิ่มข้อมูล", "error");
-                    });
+                    })
+                    .finally(resetSubmitBtn);
             }
         };
 
@@ -1905,14 +1997,17 @@
                 if (currentCategory !== 'ALL' && p.category !== currentCategory) return false;
                 // Status Filter
                 if (currentStatusFilter !== 'ALL' && p.status !== currentStatusFilter) return false;
-                // Search Query
+                // Search Query: ค้นหาเจาะจงเฉพาะชื่อ หมายเลขเสื้อ และชั้นเรียนเท่านั้น
                 if (searchQuery) {
-                    const nameMatch = (p.name || '').toLowerCase().includes(searchQuery);
-                    const numMatch = (p.number || '').toString().includes(searchQuery);
-                    const gradeMatch = (p.grade || '').toLowerCase().includes(searchQuery);
-                    const statusMatch = (p.status || '').toLowerCase().includes(searchQuery);
-                    const categoryMatch = (p.category || '').toLowerCase().includes(searchQuery);
-                    if (!nameMatch && !numMatch && !gradeMatch && !statusMatch && !categoryMatch) return false;
+                    const cleanName = (p.name || '').toLowerCase();
+                    const cleanNum = (p.number || '').toString().trim();
+                    const cleanGrade = (p.grade || '').toLowerCase();
+
+                    const nameMatch = cleanName.includes(searchQuery);
+                    const numMatch = cleanNum === searchQuery || cleanNum.includes(searchQuery);
+                    const gradeMatch = cleanGrade.includes(searchQuery);
+
+                    if (!nameMatch && !numMatch && !gradeMatch) return false;
                 }
                 return true;
             });
